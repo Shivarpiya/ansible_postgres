@@ -1,0 +1,83 @@
+- hosts: localhost
+  connection: local
+  gather_facts: False
+  tasks:
+  - name: Create a security group
+    ec2_group:
+      name: "{{ name }}"
+      description: "{{description}}"
+      region: "{{region}}"
+      vpc_id: "{{vpc_id}}"
+      aws_access_key: "{{aws_access_key}}"
+      aws_secret_key: "{{aws_secret_key}}"
+      rules:
+        - proto: tcp
+          from_port: 8080
+          to_port: 8080
+          cidr_ip: 0.0.0.0/0
+        - proto: tcp
+          from_port: 22
+          to_port: 22
+          cidr_ip: 0.0.0.0/0
+    register: firewall
+#- name: Creating Ec2 Key Pair
+#  ec2_key:
+#    name: "{{key_name}}"
+#    region: "us-east-1" #Use var
+#    aws_access_key: "{{aws_access_key}}"
+#    aws_secret_key: "{{aws_secret_key}}"
+#  register: ec2_key
+#- name: save private key
+#  copy:
+#    content: "{{ec2_key.key.private_key}}"
+#    dest: "{{ec2_dest}}"
+#    mode: 0600
+#  when: ec2_key.changed
+#- name: copy ssh key
+#  raw: sudo cp /home/ubuntu/ec2_key.pem /home/ubuntu/.ssh/id_rsa
+  - name: Create an EC2 instance
+    ec2:
+      aws_access_key: "{{aws_access_key}}"
+      aws_secret_key: "{{aws_secret_key}}"
+      key_name: "{{key_name}}"
+      region: "{{region}}"
+      group_id: "{{firewall.group_id}}"
+      instance_type: t2.micro #Use var
+      image: ami-0f9cf087c1f27d9b1 #Use Var
+      wait: yes
+      volumes: #Might_Use_Var
+        - device_name: /dev/xvda
+          volume_type: gp2
+          volume_size: 8
+          delete_on_termination: true
+      exact_count: 1
+      count_tag:
+         Name: "{{name}}"
+      instance_tags:
+         Name: "{{name}}"
+    register: ec2
+  - debug: msg= "{{item}}"
+    with_items: "{{ec2.tagged_instances[0].public_ip }}"
+  - name: Wait for SSH to come up
+    wait_for:
+      host: "{{ item.public_dns_name }}"
+      port: 22
+      delay: 60
+      timeout: 320
+      state: started
+    with_items: "{{ ec2.instances }}"
+  - name: Add new instance to host group
+    add_host:
+      hostname: "{{ item }}"
+      groupname: AWS
+      ansible_user: ubuntu
+      ansible_ssh_private_key_file: /home/ubuntu/aws_ec2.pem
+    with_items: "{{ ec2.tagged_instances[0].public_ip }}"
+- hosts: AWS
+  become: yes
+  remote_user: ubuntu
+  gather_facts: False
+  vars_files:
+    - vars/main.yml
+  roles:
+    - createdb

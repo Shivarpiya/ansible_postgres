@@ -1,0 +1,18 @@
+#AWS_CRedentials
+aws_access_key: AKIA2NW4BNZR7GPR42G3
+aws_secret_key: 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
+#Security Group Name
+name: Ansible
+description: Ansible_Security_Group
+region: us-east-1
+vpc_id: vpc-fc91fa86
+key_name: ec2_db
+#CloudService: AWS
+#resource_group: resource_group
+#location: eastus
+#azure_vm_username: azureuser
+#azure_vm_password: Password123
+#azure_vm_name: test
+#war_src: /home/ec2-user/hello-world-war-1.0.0.war
+#war_dest: /var/lib/tomcat8/webapps/Web.war
+#ec2_dest: /home/ec2-user/.ssh/id_rsa
